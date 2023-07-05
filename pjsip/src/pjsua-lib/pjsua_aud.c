@@ -186,6 +186,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
     pjsua_call *call;
     pjsua_call_media *call_med;
     pj_status_t status;
+    pj_status_t status2;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
                      PJ_EINVAL);
@@ -208,6 +209,18 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
         if (status == PJ_SUCCESS)
             status = pjmedia_stream_get_stat_jbuf(call_med->strm.a.stream,
                                                   &stat->jbuf);
+        /* Step 3. Get codec summary stat */
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+        pjmedia_stream *stream = call_med->strm.a.stream;
+        pjmedia_codec *codec = NULL;
+        status2 = pjmedia_stream_get_codec(stream, &codec);
+        if (status2 == PJ_SUCCESS) {
+            status2 = pjmedia_codec_opus_get_stat(codec, &stat->opus_stat);
+            if (status2 != PJ_SUCCESS) {
+                PJ_LOG(3, (THIS_FILE, "Unable to obtain OPUS codec statistics!"));
+            }
+        }
+#endif
         break;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     case PJMEDIA_TYPE_VIDEO:
