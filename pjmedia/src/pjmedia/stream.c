@@ -2244,17 +2244,21 @@ on_return:
     {
         int i;
         pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
+        PJ_LOG(4, (THIS_FILE, "RTP: Process packet with wrong sequence number: diff = %u", seq_st.diff));
         stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
+        PJ_LOG(4, (THIS_FILE, "RTP: Request packet recover with NACK: pid = %u", stream->rtcp_fb_nack.pid));
         for (i = 1; i < (seq_st.diff - 1); ++i) {
             stream->rtcp_fb_nack.blp <<= 1;
             stream->rtcp_fb_nack.blp |= 1;
         }
         stream->rtcp.stat.tx.nack_cnt += PJ_MIN(seq_st.diff, 18) - 1;
         status = pjmedia_nack_buffer_push(stream->nack_buffer, stream->rtcp_fb_nack);
-
         if (status != PJ_SUCCESS) {
            PJ_PERROR(4,(THIS_FILE, status, "Failed to push NACK packet to the buffer"));
         }
+
+        /* Update NACK packet counter */
+        stream->rtcp.stat.tx.nack_pkt_cnt += 1;
 
         /* Send it immediately */
         status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
