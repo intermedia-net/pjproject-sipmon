@@ -2194,7 +2194,14 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                   1000;
 #endif
 
-        /* Put each frame to jitter buffer. */  
+        /* Update NACK HIT counter */
+        unsigned sequence_num2 = pj_ntohs(hdr->seq);
+        pj_bool_t pkt_in_nack_buffer = pjmedia_nack_buffer_frame_contains(stream->nack_buffer, sequence_num2);
+        if (pkt_in_nack_buffer) {
+            stream->rtcp.stat.tx.nack_hit_cnt += 1;
+        }
+
+        /* Put each frame to jitter buffer. */
         for (i=0; i<count; ++i) {
             unsigned ext_seq;
             pj_bool_t discarded;

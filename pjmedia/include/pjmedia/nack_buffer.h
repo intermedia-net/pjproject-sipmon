@@ -29,6 +29,10 @@ pjmedia_nack_buffer_push(pjmedia_nack_buffer *buffer,
                          pjmedia_rtcp_fb_nack nack);
 
 PJ_DECL(pj_bool_t)
+pjmedia_nack_buffer_frame_contains(pjmedia_nack_buffer *buffer,
+                                   pj_uint16_t sequence_num);
+
+PJ_DECL(pj_bool_t)
 pjmedia_nack_buffer_frame_dequeued(pjmedia_nack_buffer *buffer,
                                    uint16_t sequence_num);
 
