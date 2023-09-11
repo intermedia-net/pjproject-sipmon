@@ -190,7 +190,8 @@ typedef struct pjmedia_rtcp_stream_stat
     pj_math_stat    loss_period;/**< Loss period statistics (in usec)               */
 
     unsigned        nack_cnt;        /**< Total number of packets requested using NACK   */
-    unsigned        nack_pkt_cnt;
+    unsigned        nack_pkt_cnt;    /**< Transmit RTCP with NACK count                  */
+    unsigned        nack_hit_cnt;    /**< Hit count with NACK packet                     */
     unsigned        useful_nack_cnt; /**< Total number of played NACK packets            */
 
     struct {
