@@ -65,7 +65,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			echo_port.o echo_suppress.o echo_webrtc.o echo_webrtc_aec3.o \
 			endpoint.o errno.o event.o format.o ffmpeg_util.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
-			nack_buffer.o null_port.o plc_common.o port.o splitcomb.o \
+			nack_buffer.o nack_map.o null_port.o plc_common.o port.o splitcomb.o \
 			resample_resample.o resample_libsamplerate.o resample_speex.o \
 			resample_port.o rtcp.o rtcp_xr.o rtcp_fb.o rtp.o \
 			sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \

@@ -22,6 +22,7 @@
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/nack_buffer.h>
+#include <pjmedia/nack_map.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
@@ -167,6 +168,7 @@ struct pjmedia_stream
     unsigned                 soft_start_cnt;/**< Stream soft start counter */
 
     pjmedia_nack_buffer     *nack_buffer;    /**< Nack buffer                */
+    pjmedia_nack_map        *nack_map;       /**< Nack map                   */
 
     pjmedia_rtcp_session     rtcp;          /**< RTCP for incoming RTP.     */
 
@@ -765,12 +767,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         } else {
             /* Got "NORMAL" frame from jitter buffer */
             if (stream->send_rtcp_fb_nack) {
-                pj_bool_t is_nacked_frame = pjmedia_nack_buffer_frame_contains(stream->nack_buffer, packet_seq);
+                pj_bool_t is_nacked_frame = pjmedia_nack_buffer_frame_dequeued(stream->nack_buffer, packet_seq);
                 if (is_nacked_frame) {
-                    unsigned nack_buffer_size = pjmedia_nack_buffer_len(stream->nack_buffer);
-                    PJ_LOG(4,(stream->port.info.name.ptr,
-                          "NACK packet use: packet_seq = %u count = %u",
-                          packet_seq, nack_buffer_size));
                     stream->rtcp.stat.tx.useful_nack_cnt += 1;
                 }
             }
@@ -1889,6 +1887,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bool_t check_pt;
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
+    pj_uint16_t sequence_num = -1;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -1920,12 +1919,13 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         stream->rtcp.stat.rx.discard++;
         return;
     }
+    sequence_num = pj_ntohs(hdr->seq);
 
     /* Check if multiplexing is allowed and the payload indicates RTCP. */
     if (stream->si.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
         on_rx_rtcp(stream, pkt, bytes_read);
         return;
-    }    
+    }
 
     /* See if source address of RTP packet is different than the
      * configured address, and check if we need to tell the
@@ -2070,6 +2070,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_mutex_lock( stream->jb_mutex );
     if (seq_st.status.flag.restart) {
         pjmedia_nack_buffer_reset(stream->nack_buffer);
+        pjmedia_nack_map_reset(stream->nack_map);
         status = pjmedia_jbuf_reset(stream->jb);
         PJ_LOG(4,(stream->port.info.name.ptr, "Jitter buffer reset"));
     } else {
@@ -2199,9 +2200,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 #endif
 
         /* Update NACK HIT counter */
-        unsigned sequence_num2 = pj_ntohs(hdr->seq);
-        pj_bool_t pkt_in_nack_buffer = pjmedia_nack_buffer_frame_contains(stream->nack_buffer, sequence_num2);
-        if (pkt_in_nack_buffer) {
+        pj_bool_t pkt_in_nack_map = pjmedia_nack_map_contains(stream->nack_map, sequence_num);
+        if (pkt_in_nack_map) {
             stream->rtcp.stat.tx.nack_hit_cnt += 1;
         }
 
@@ -2250,8 +2250,8 @@ on_return:
                          pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
 
     /* RTCP-FB generic NACK */
-    if (stream->rtcp.received >= 10 && seq_st.diff > 1 &&
-        stream->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
+    if ((stream->rtcp.received >= 10) && (seq_st.diff > 1) &&
+        stream->send_rtcp_fb_nack && (pj_ntohs(hdr->seq) >= seq_st.diff))
     {
         int i;
         pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
@@ -2270,6 +2270,12 @@ on_return:
 
         /* Update NACK packet counter */
         stream->rtcp.stat.tx.nack_pkt_cnt += 1;
+
+        /* Set NACK map markers */
+        pj_uint16_t skip_cnt = PJ_MIN(seq_st.diff, 18) - 1;
+        for (i = 0; i <= skip_cnt; i++) {
+            pjmedia_nack_map_set(stream->nack_map, sequence_num + i);
+        }
 
         /* Send it immediately */
         status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
@@ -2771,12 +2777,18 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
                                  jb_max, &stream->jb);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
-    
+
+    /* Create NACK buffer */
     status = pjmedia_nack_buffer_create(pool, 20, &stream->nack_buffer);
     if (status != PJ_SUCCESS) {
         goto err_cleanup; 
     }
 
+    /* Create NACK map */
+    status = pjmedia_nack_map_create(pool, &stream->nack_map);
+    if (status != PJ_SUCCESS) {
+        goto err_cleanup;
+    }
 
     /* Set up jitter buffer */
     pjmedia_jbuf_set_adaptive( stream->jb, jb_init, jb_min_pre, jb_max_pre);
