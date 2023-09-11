@@ -767,6 +767,10 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             if (stream->send_rtcp_fb_nack) {
                 pj_bool_t is_nacked_frame = pjmedia_nack_buffer_frame_dequeued(stream->nack_buffer, packet_seq);
                 if (is_nacked_frame) {
+                    unsigned nack_buffer_size = pjmedia_nack_buffer_len(stream->nack_buffer);
+                    PJ_LOG(4,(stream->port.info.name.ptr,
+                          "NACK packet use: packet_seq = %u count = %u",
+                          packet_seq, nack_buffer_size));
                     stream->rtcp.stat.tx.useful_nack_cnt += 1;
                 }
             }
