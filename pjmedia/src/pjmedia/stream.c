@@ -765,7 +765,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         } else {
             /* Got "NORMAL" frame from jitter buffer */
             if (stream->send_rtcp_fb_nack) {
-                pj_bool_t is_nacked_frame = pjmedia_nack_buffer_frame_dequeued(stream->nack_buffer, packet_seq);
+                pj_bool_t is_nacked_frame = pjmedia_nack_buffer_frame_contains(stream->nack_buffer, packet_seq);
                 if (is_nacked_frame) {
                     unsigned nack_buffer_size = pjmedia_nack_buffer_len(stream->nack_buffer);
                     PJ_LOG(4,(stream->port.info.name.ptr,
