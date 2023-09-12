@@ -2202,6 +2202,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         /* Update NACK HIT counter */
         pj_bool_t pkt_in_nack_map = pjmedia_nack_map_contains(stream->nack_map, sequence_num);
         if (pkt_in_nack_map) {
+            PJ_LOG(4, (THIS_FILE, "RTP: Apply NACK packet: pid = %u", sequence_num));
             stream->rtcp.stat.tx.nack_hit_cnt += 1;
         }
 
@@ -2255,7 +2256,7 @@ on_return:
     {
         int i;
         pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
-        PJ_LOG(4, (THIS_FILE, "RTP: Process packet with wrong sequence number: diff = %u", seq_st.diff));
+        PJ_LOG(4, (THIS_FILE, "RTP: Process packet with wrong sequence number: pid = %u diff = %u", sequence_num, seq_st.diff));
         stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
         PJ_LOG(4, (THIS_FILE, "RTP: Request packet recover with NACK: pid = %u", stream->rtcp_fb_nack.pid));
         for (i = 1; i < (seq_st.diff - 1); ++i) {
@@ -2272,9 +2273,10 @@ on_return:
         stream->rtcp.stat.tx.nack_pkt_cnt += 1;
 
         /* Set NACK map markers */
+        pj_uint16_t start_sequence_num = pj_ntohs(hdr->seq) - seq_st.diff + 1;
         pj_uint16_t skip_cnt = PJ_MIN(seq_st.diff, 18) - 1;
-        for (i = 0; i <= skip_cnt; i++) {
-            pj_uint16_t pid = sequence_num + i;
+        for (i = 0; i < skip_cnt; i++) {
+            pj_uint16_t pid = start_sequence_num + i;
             PJ_LOG(4, (THIS_FILE, "RTP: NACK map set: pid = %u", pid));
             pjmedia_nack_map_set(stream->nack_map, pid);
         }
