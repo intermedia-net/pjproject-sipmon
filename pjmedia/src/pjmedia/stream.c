@@ -2274,7 +2274,9 @@ on_return:
         /* Set NACK map markers */
         pj_uint16_t skip_cnt = PJ_MIN(seq_st.diff, 18) - 1;
         for (i = 0; i <= skip_cnt; i++) {
-            pjmedia_nack_map_set(stream->nack_map, sequence_num + i);
+            pj_uint16_t pid = sequence_num + i;
+            PJ_LOG(4, (THIS_FILE, "RTP: NACK map set: pid = %u", pid));
+            pjmedia_nack_map_set(stream->nack_map, pid);
         }
 
         /* Send it immediately */
