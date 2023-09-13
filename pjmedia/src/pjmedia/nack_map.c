@@ -23,6 +23,8 @@ pjmedia_nack_map_create(pj_pool_t *pool,
     pjmedia_nack_map *nack_map = PJ_POOL_ZALLOC_T(pool, pjmedia_nack_map);
     PJ_ASSERT_RETURN(nack_map != NULL, PJ_ENOMEM);
 
+    nack_map->cycle = 0;
+
     nack_map->packets = pj_pool_alloc(pool, MAX_MAP_SIZE * sizeof(pj_bool_t));
     PJ_ASSERT_RETURN(nack_map->packets != NULL, PJ_ENOMEM);
 
