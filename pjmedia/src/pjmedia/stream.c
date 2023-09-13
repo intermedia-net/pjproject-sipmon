@@ -2064,6 +2064,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         goto on_return;
     }
 
+    /* Check RTP session update sequence cycle */
+    pjmedia_nack_map_check_cycle(stream->nack_map, &channel->rtp);
+
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
      * when RTP session is restarted.
      */

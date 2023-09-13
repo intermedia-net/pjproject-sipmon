@@ -17,6 +17,7 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_nack_map pjmedia_nack_map;
 
 PJ_DEF(pj_status_t) pjmedia_nack_map_create(pj_pool_t *pool, pjmedia_nack_map **map);
+PJ_DEF(pj_status_t) pjmedia_nack_map_check_cycle(pjmedia_nack_map *map, pjmedia_rtp_session *rtp);
 PJ_DEF(pj_status_t) pjmedia_nack_map_reset(pjmedia_nack_map *map);
 PJ_DEF(pj_status_t) pjmedia_nack_map_set(pjmedia_nack_map *map, pj_uint16_t sequence_num);
 PJ_DECL(pj_bool_t) pjmedia_nack_map_contains(pjmedia_nack_map *map, pj_uint16_t sequence_num);

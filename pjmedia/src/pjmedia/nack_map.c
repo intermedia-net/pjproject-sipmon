@@ -10,7 +10,8 @@
 #define THIS_FILE   "nack_map.c"
 
 struct pjmedia_nack_map {
-    pj_bool_t *packets;
+    pj_uint32_t   cycle;    /* Current sequence number cycle  */
+    pj_bool_t    *packets;  /* Map with NACKed packets        */
 };
 
 #define MAX_MAP_SIZE 65536
@@ -41,6 +42,24 @@ pjmedia_nack_map_reset(pjmedia_nack_map *map) {
     }
 
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_nack_map_check_cycle(pjmedia_nack_map *map, pjmedia_rtp_session *rtp) {
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(map, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rtp, PJ_EINVAL);
+
+    if (map->cycle < rtp->seq_ctrl.cycles) {
+        // Debug message 
+        PJ_LOG(3, (THIS_FILE, "Nack map sequence cycle update detected."));
+        // Update RTP map circle value
+        map->cycle = rtp->seq_ctrl.cycles;
+        // Reset NACK mapping
+        status = pjmedia_nack_map_reset(map);
+    }
+
+    return status;
 }
 
 PJ_DEF(pj_status_t)
